@@ -20,8 +20,20 @@ SOCKET create_socket(const int protocol)
         type = SOCK_STREAM;
     }
 
-    // Return INVALID_SOCKET when failed in which case call WSAGetLastError().
-    return socket(AF_INET, type, protocol);
+    auto res = socket(AF_INET, type, protocol);
+    // Make it a non-blocking socket.
+    if (res != INVALID_SOCKET && protocol == IPPROTO_TCP)
+    {
+        auto mode = 1ul;
+        if (ioctlsocket(res, FIONBIO, &mode) != NO_ERROR)
+        {
+            closesocket(res);
+            res = INVALID_SOCKET;
+        }
+    }
+
+    // INVALID_SOCKET when failed in which case call WSAGetLastError()
+    return res;
 }
 
 // Create an address.
