@@ -174,13 +174,20 @@ int main(int argc, char** argv)
   }
 
   // Listen for a response.
+  std::string res;
   char recvbuf[EMTU]{};
   auto recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
+  res += recvbuf;
   while (recvlen != 0)
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::cout << '.';
+    for (auto& ch : recvbuf)
+    {
+      ch = 0;
+    }
     recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
+    res += recvbuf;
   }
 
   // clean-ups
@@ -193,8 +200,10 @@ int main(int argc, char** argv)
   WSACleanup();
 #endif
 
-  std::cout << recvbuf << std::endl;
+  std::cout << res.c_str() << std::endl;
+#ifdef _WIN32
   std::getchar();
+#endif
 
   return 0;
 }
