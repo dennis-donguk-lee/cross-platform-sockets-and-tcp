@@ -72,10 +72,8 @@ int connect_socket_and_address(const SOCKET sock, sockaddr_in* addr)
   {
     return WSAGetLastError();
   }
-  else
-  {
-    return 0;
-  }
+
+  return 0;
 }
 
 int send_tcp(const SOCKET sock, char const* buf, const int len)
@@ -90,7 +88,19 @@ int send_tcp(const SOCKET sock, char const* buf, const int len)
   return res;
 }
 
+int receive_tcp(const SOCKET sock, char* buf, const int len)
+{
+  const auto size = recv(sock, buf, len, 0);
+  if (size == SOCKET_ERROR)
+  {
+    return -1;
+  }
 
+  return size;
+}
+
+
+#define EMTU 1500 // Ethernet MTU size
 int main(int argc, char** argv)
 {
   if (init_winsock() != 0)
@@ -116,17 +126,26 @@ int main(int argc, char** argv)
   sendbuf = sendbuf.substr(pos + 1);
   const auto csendbuf = sendbuf.c_str();
 
-  // Send data over TCP and listen for a response.
+  // Send data over TCP.
   auto sendlen = send_tcp(sock, csendbuf, sendbuf.length());
   while (sendlen == SOCKET_ERROR)
   {
     sendlen = send_tcp(sock, csendbuf, sendbuf.length());
   }
-  //char recvbuf[EMTU]{};
-  //const auto recvlen = Receive(sock, recvbuf, sizeof(recvbuf));
-  //assert(recvlen >= 0);
+
+  // Listen for a response.
+  char recvbuf[EMTU]{};
+  auto recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
+  while (recvlen != 0)
+  {
+    recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
+  }
+
+  std::cout << recvbuf << std::endl;
 
   delete addr;
+
+  std::getchar();
 
   return 0;
 }
