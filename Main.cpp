@@ -2,6 +2,8 @@
 #include <WS2tcpip.h>
 #include <iostream>
 #include <cassert>
+#include <thread>
+#include <chrono>
 
 // Initialize Winsock.
 int init_winsock()
@@ -131,6 +133,8 @@ int main(int argc, char** argv)
   auto sendlen = send_tcp(sock, csendbuf, sendbuf.length());
   while (sendlen == SOCKET_ERROR)
   {
+    //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //std::cout << '.';
     sendlen = send_tcp(sock, csendbuf, sendbuf.length());
   }
 
@@ -139,6 +143,8 @@ int main(int argc, char** argv)
   auto recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
   while (recvlen != 0)
   {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << '.';
     recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
   }
 
