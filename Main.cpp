@@ -119,6 +119,7 @@ int main(int argc, char** argv)
   {
     err = connect_socket_and_address(sock, addr);
   }
+  delete addr;
 
   // Get the sending buffer.
   std::string sendbuf = argv[0];
@@ -141,10 +142,11 @@ int main(int argc, char** argv)
     recvlen = receive_tcp(sock, recvbuf, sizeof(recvbuf));
   }
 
+  // clean-ups
+  closesocket(sock);
+  WSACleanup();
+
   std::cout << recvbuf << std::endl;
-
-  delete addr;
-
   std::getchar();
 
   return 0;
