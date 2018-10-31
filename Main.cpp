@@ -1,16 +1,34 @@
+#ifdef _WIN32
 #pragma comment(lib, "Ws2_32.lib")
 #include <WS2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#define SOCKET int
+#define INVALID_SOCKET -1
+#define NO_ERROR 0L
+#define SOCKET_ERROR -1
+#endif
+
 #include <iostream>
 #include <cassert>
 #include <thread>
 #include <chrono>
 
+#ifdef _WIN32
 // Initialize Winsock.
 int init_winsock()
 {
   WSADATA wsa;
   return WSAStartup(MAKEWORD(2, 2), &wsa);
 }
+#endif
 
 // Create a socket.
 SOCKET create_socket(const int protocol)
@@ -28,9 +46,18 @@ SOCKET create_socket(const int protocol)
   if (res != INVALID_SOCKET && protocol == IPPROTO_TCP)
   {
     auto mode = 1ul;
-    if (ioctlsocket(res, FIONBIO, &mode) != NO_ERROR)
+#ifdef _WIN32
+    const auto err = ioctlsocket(res, FIONBIO, &mode);
+#else
+    const auto err = ioctl(res, FIONBIO, &mode);
+#endif
+    if (err != NO_ERROR)
     {
+#ifdef _WIN32
       closesocket(res);
+#else
+      close(res);
+#endif
       res = INVALID_SOCKET;
     }
   }
@@ -51,7 +78,9 @@ sockaddr_in* create_address(const char* ip, const int port)
   if (ip == nullptr)
   {
     // Bind to all IP addresses local machine may have.
+#ifdef _WIN32
     addr->sin_addr.S_un.S_addr = INADDR_ANY;
+#endif
   }
   else
   {
@@ -72,7 +101,11 @@ int connect_socket_and_address(const SOCKET sock, sockaddr_in* addr)
     == SOCKET_ERROR
     )
   {
+#ifdef _WIN32
     return WSAGetLastError();
+#else
+    return -1;
+#endif
   }
 
   return 0;
@@ -105,11 +138,13 @@ int receive_tcp(const SOCKET sock, char* buf, const int len)
 #define EMTU 1500 // Ethernet MTU size
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
   if (init_winsock() != 0)
   {
     std::cout << "WSAStartup failed. Error code: " << WSAGetLastError();
     exit(EXIT_FAILURE);
   }
+#endif
 
   // Create a socket and an address.
   const auto sock = create_socket(IPPROTO_TCP);
@@ -149,8 +184,14 @@ int main(int argc, char** argv)
   }
 
   // clean-ups
-  closesocket(sock);
+#ifdef _WIN32
+      closesocket(sock);
+#else
+      close(sock);
+#endif
+#ifdef _WIN32
   WSACleanup();
+#endif
 
   std::cout << recvbuf << std::endl;
   std::getchar();
